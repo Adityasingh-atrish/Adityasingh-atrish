@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VC Pitch Triage</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #16161f;
+      border-bottom: 1px solid #2a2a3a;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    header h1 span { color: #7c6aff; }
+
+    #stats {
+      font-size: 13px;
+      color: #666;
+    }
+    #stats b { color: #e8e8f0; }
+
+    /* ── Fetch button ── */
+    #fetchBtn {
+      background: #7c6aff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    #fetchBtn:hover { background: #6b5ae0; }
+    #fetchBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    #emptyState {
+      text-align: center;
+      padding: 80px 20px;
+      color: #444;
+    }
+    #emptyState h2 { font-size: 22px; margin-bottom: 10px; color: #666; }
+    #emptyState p { font-size: 14px; }
+
+    /* ── Pitch card ── */
+    .pitch-card {
+      background: #16161f;
+      border: 1px solid #2a2a3a;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: border-color 0.2s;
+    }
+    .pitch-card:hover { border-color: #3a3a50; }
+    .pitch-card.done { opacity: 0.55; }
+
+    /* ── Card header row ── */
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .company-info { flex: 1; }
+    .company-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .meta {
+      font-size: 12px;
+      color: #555;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .meta span { display: flex; align-items: center; gap: 4px; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-ai      { background: #1e1e40; color: #7c6aff; }
+    .badge-consumer{ background: #1e3020; color: #5ac47a; }
+    .badge-fintech  { background: #2a1a10; color: #e0833a; }
+    .badge-other    { background: #1e1e2a; color: #888; }
+
+    /* ── Star rating ── */
+    .rating-block { text-align: right; min-width: 110px; }
+    .stars { font-size: 20px; color: #f0c040; letter-spacing: 1px; }
+    .rating-label {
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+    .label-meet   { color: #5ac47a; }
+    .label-reject { color: #e05a5a; }
+    .label-manual { color: #e0a03a; }
+
+    /* ── Info grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 640px) { .info-grid { grid-template-columns: 1fr; } }
+
+    .info-box {
+      background: #1c1c28;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .info-box label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 5px;
+    }
+    .info-box p { font-size: 13px; color: #ccc; line-height: 1.5; }
+
+    /* ── Reasoning ── */
+    .reasoning-box {
+      background: #1c1c28;
+      border-left: 3px solid #7c6aff;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+    .reasoning-box label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #7c6aff;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+    }
+    .reasoning-box p { font-size: 13px; color: #bbb; line-height: 1.6; }
+
+    /* ── Flags ── */
+    .flags { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .flag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .flag-green { background: #0e2a18; color: #5ac47a; border: 1px solid #1e4a28; }
+    .flag-red   { background: #2a0e0e; color: #e05a5a; border: 1px solid #4a1e1e; }
+
+    /* ── Action buttons ── */
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-reject { background: #2a1010; color: #e05a5a; border: 1px solid #4a1e1e; }
+    .btn-me     { background: #1a1a40; color: #7c9aff; border: 1px solid #2a2a60; }
+    .btn-disha  { background: #0e2a18; color: #5ac47a; border: 1px solid #1e4a28; }
+
+    .action-done {
+      font-size: 13px;
+      color: #555;
+      font-style: italic;
+      padding: 10px 0;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #1c1c28;
+      border: 1px solid #3a3a50;
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 13px;
+      color: #e8e8f0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      max-width: 320px;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.error { border-color: #e05a5a; }
+    #toast.success { border-color: #5ac47a; }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 28px 0 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>VC Pitch <span>Triage</span></h1>
+  <div id="stats" style="display:none">
+    <b id="statCount">0</b> pitches &nbsp;·&nbsp;
+    <b id="statMeet" style="color:#5ac47a">0</b> meet &nbsp;·&nbsp;
+    <b id="statReject" style="color:#e05a5a">0</b> reject
+  </div>
+  <button id="fetchBtn" onclick="fetchPitches()">Fetch Today's Pitches</button>
+</header>
+
+<main>
+  <div id="emptyState">
+    <h2>No pitches loaded yet</h2>
+    <p>Click <strong>Fetch Today's Pitches</strong> to pull from Gmail and run AI analysis.</p>
+  </div>
+  <div id="pitchList"></div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  function showToast(msg, type = "success") {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "show " + type;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ""; }, 3500);
+  }
+
+  function sectorBadge(sector) {
+    if (!sector) return '<span class="badge badge-other">Unknown</span>';
+    const s = sector.toLowerCase();
+    if (s.includes("ai") || s.includes("deep")) return `<span class="badge badge-ai">${sector}</span>`;
+    if (s.includes("consumer")) return `<span class="badge badge-consumer">${sector}</span>`;
+    if (s.includes("fin")) return `<span class="badge badge-fintech">${sector}</span>`;
+    return `<span class="badge badge-other">${sector}</span>`;
+  }
+
+  function starString(rating) {
+    rating = Math.min(5, Math.max(0, parseInt(rating) || 0));
+    return "★".repeat(rating) + "☆".repeat(5 - rating);
+  }
+
+  function renderPitches(pitches) {
+    const list = document.getElementById("pitchList");
+    const empty = document.getElementById("emptyState");
+    const stats = document.getElementById("stats");
+
+    if (!pitches.length) {
+      empty.style.display = "block";
+      list.innerHTML = "";
+      stats.style.display = "none";
+      return;
+    }
+
+    empty.style.display = "none";
+    stats.style.display = "block";
+
+    let meetCount = 0, rejectCount = 0;
+    pitches.forEach(p => {
+      const rec = (p.analysis.recommendation || "").toUpperCase();
+      if (rec === "MEET") meetCount++;
+      else if (rec === "REJECT") rejectCount++;
+    });
+    document.getElementById("statCount").textContent = pitches.length;
+    document.getElementById("statMeet").textContent = meetCount;
+    document.getElementById("statReject").textContent = rejectCount;
+
+    // Group: actioned vs pending
+    const pending = pitches.filter(p => !p.action_taken);
+    const done = pitches.filter(p => p.action_taken);
+
+    let html = "";
+    if (pending.length) {
+      html += `<div class="section-title">Pending action (${pending.length})</div>`;
+      pending.forEach(p => { html += buildCard(p); });
+    }
+    if (done.length) {
+      html += `<div class="section-title">Done (${done.length})</div>`;
+      done.forEach(p => { html += buildCard(p, true); });
+    }
+
+    list.innerHTML = html;
+  }
+
+  function buildCard(p, isDone = false) {
+    const a = p.analysis;
+    const rec = (a.recommendation || "").toUpperCase();
+    const labelClass = rec === "MEET" ? "label-meet" : rec === "REJECT" ? "label-reject" : "label-manual";
+    const labelText = rec === "MEET" ? "MEET" : rec === "REJECT" ? "REJECT" : "REVIEW";
+
+    const greenFlags = (a.green_flags || []).map(f =>
+      `<span class="flag flag-green">✓ ${f}</span>`).join("");
+    const redFlags = (a.red_flags || []).map(f =>
+      `<span class="flag flag-red">✗ ${f}</span>`).join("");
+
+    let actionsHtml;
+    if (p.action_taken) {
+      const labels = {
+        rejected: "✓ Rejection email sent",
+        sent_to_me: "✓ Forwarded to your work email",
+        sent_to_disha: "✓ Forwarded to Disha",
+      };
+      actionsHtml = `<p class="action-done">${labels[p.action_taken] || p.action_taken}</p>`;
+    } else {
+      actionsHtml = `
+        <button class="btn btn-reject" onclick="takeAction('${p.id}', 'reject', this)">
+          ✕ Send Rejection
+        </button>
+        <button class="btn btn-me" onclick="takeAction('${p.id}', 'my_email', this)">
+          → Send to My Email
+        </button>
+        <button class="btn btn-disha" onclick="takeAction('${p.id}', 'disha_email', this)">
+          → Send to Disha
+        </button>`;
+    }
+
+    return `
+    <div class="pitch-card ${isDone ? 'done' : ''}" id="card-${p.id}">
+      <div class="card-header">
+        <div class="company-info">
+          <div class="company-name">${a.company_name || "Unknown Company"}</div>
+          <div class="meta">
+            <span>${sectorBadge(a.sector)}</span>
+            <span>📧 ${p.founder_name || p.founder_email}</span>
+            <span>💰 ${a.ask || '?'} &nbsp;·&nbsp; ${a.stage || '?'}</span>
+          </div>
+        </div>
+        <div class="rating-block">
+          <div class="stars">${starString(a.rating)}</div>
+          <div class="rating-label ${labelClass}">${labelText}</div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-box">
+          <label>Problem</label>
+          <p>${a.problem || '—'}</p>
+        </div>
+        <div class="info-box">
+          <label>Solution</label>
+          <p>${a.solution || '—'}</p>
+        </div>
+        <div class="info-box">
+          <label>Traction</label>
+          <p>${a.traction || 'Not mentioned'}</p>
+        </div>
+        <div class="info-box">
+          <label>Email</label>
+          <p style="word-break:break-all">${p.founder_email}</p>
+        </div>
+      </div>
+
+      <div class="reasoning-box">
+        <label>AI Reasoning</label>
+        <p>${a.reasoning || '—'}</p>
+      </div>
+
+      ${(greenFlags || redFlags) ? `<div class="flags">${greenFlags}${redFlags}</div>` : ''}
+
+      <div class="actions">
+        ${actionsHtml}
+      </div>
+    </div>`;
+  }
+
+  async function fetchPitches() {
+    const btn = document.getElementById("fetchBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Fetching & analyzing…';
+
+    try {
+      const res = await fetch("/api/fetch", { method: "POST" });
+      const data = await res.json();
+      if (data.error) { showToast("Error: " + data.error, "error"); return; }
+      renderPitches(data.pitches);
+      showToast(`Loaded ${data.count} pitch${data.count !== 1 ? 'es' : ''}.`, "success");
+    } catch (e) {
+      showToast("Network error: " + e.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Refresh Pitches";
+    }
+  }
+
+  async function takeAction(id, action, btnEl) {
+    // Disable all buttons in this card while processing
+    const card = document.getElementById("card-" + id);
+    card.querySelectorAll(".btn").forEach(b => b.disabled = true);
+    btnEl.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await fetch("/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        showToast("Error: " + data.error, "error");
+        card.querySelectorAll(".btn").forEach(b => b.disabled = false);
+        btnEl.textContent = btnEl.dataset.orig || "Retry";
+        return;
+      }
+      showToast(data.message, "success");
+      // Reload to reflect actioned state
+      const cached = await fetch("/api/pitches");
+      const cdata = await cached.json();
+      renderPitches(cdata.pitches);
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+      card.querySelectorAll(".btn").forEach(b => b.disabled = false);
+    }
+  }
+
+  // On load, fetch cached pitches (don't re-hit Gmail)
+  window.onload = async () => {
+    try {
+      const res = await fetch("/api/pitches");
+      const data = await res.json();
+      if (data.pitches && data.pitches.length) renderPitches(data.pitches);
+    } catch (_) {}
+  };
+</script>
+
+</body>
+</html>
