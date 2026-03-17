@@ -1,14 +1,14 @@
 """
-AI analyzer: send pitch content to GPT-4 and get structured analysis.
+AI analyzer: send pitch content to Claude and get structured analysis.
 """
 import json
 import os
 
+import anthropic
 from dotenv import load_dotenv
-from openai import OpenAI
 
 load_dotenv()
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 SYSTEM_PROMPT = """You are an expert VC analyst at an early-stage venture fund.
 Your job is to quickly triage inbound pitch emails and investor decks.
@@ -39,7 +39,7 @@ PITCH CONTENT:
 
 def analyze_pitch(full_content: str) -> dict:
     """
-    Send pitch content to GPT-4 and return structured analysis dict.
+    Send pitch content to Claude and return structured analysis dict.
     Falls back to a default dict if parsing fails.
     """
     prompt = USER_PROMPT_TEMPLATE.format(
@@ -47,16 +47,15 @@ def analyze_pitch(full_content: str) -> dict:
     )
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=800,
+            system=SYSTEM_PROMPT,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.2,
-            max_tokens=800,
         )
-        raw = response.choices[0].message.content.strip()
+        raw = response.content[0].text.strip()
         analysis = json.loads(raw)
         # Ensure required keys exist
         for key in ["company_name", "problem", "solution", "rating", "recommendation", "reasoning"]:
@@ -87,8 +86,9 @@ def analyze_pitch(full_content: str) -> dict:
 def _fallback_analysis(content: str) -> dict:
     """Simple fallback if JSON parsing fails — retry with stricter prompt."""
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
             messages=[
                 {
                     "role": "user",
@@ -99,10 +99,8 @@ def _fallback_analysis(content: str) -> dict:
                     ),
                 }
             ],
-            temperature=0.1,
-            max_tokens=300,
         )
-        raw = response.choices[0].message.content.strip()
+        raw = response.content[0].text.strip()
         # Strip markdown fences if present
         if raw.startswith("```"):
             raw = raw.split("```")[1]
