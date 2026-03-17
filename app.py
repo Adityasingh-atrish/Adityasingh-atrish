@@ -70,7 +70,9 @@ def fetch_pitches():
                 "summary_text": summary_text,
                 "action_taken": None,  # reject / my_email / disha_email
             }
-            pitches_store[msg_id] = pitch_data
+            # Only cache successful analyses; errors will be retried on next refresh
+            if "error" not in analysis:
+                pitches_store[msg_id] = pitch_data
             results.append(pitch_data)
 
         # Sort: highest rated first
