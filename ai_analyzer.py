@@ -4,8 +4,10 @@ AI analyzer: send pitch content to GPT-4 and get structured analysis.
 import json
 import os
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
+load_dotenv()
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 SYSTEM_PROMPT = """You are an expert VC analyst at an early-stage venture fund.
