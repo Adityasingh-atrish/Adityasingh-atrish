@@ -48,7 +48,7 @@ def analyze_pitch(full_content: str) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-3-5-haiku-20241022",
             max_tokens=800,
             system=SYSTEM_PROMPT,
             messages=[
@@ -87,7 +87,7 @@ def _fallback_analysis(content: str) -> dict:
     """Simple fallback if JSON parsing fails — retry with stricter prompt."""
     try:
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-3-5-haiku-20241022",
             max_tokens=300,
             messages=[
                 {
