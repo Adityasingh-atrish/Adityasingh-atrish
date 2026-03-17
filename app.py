@@ -47,6 +47,11 @@ def fetch_pitches():
         service = get_gmail_service()
         emails = fetch_pitch_emails(service)
 
+        # Evict any previously cached entries that contain errors so they get re-analyzed
+        for mid in list(pitches_store.keys()):
+            if "error" in pitches_store[mid].get("analysis", {}):
+                del pitches_store[mid]
+
         results = []
         for em in emails:
             msg_id = em["id"]
